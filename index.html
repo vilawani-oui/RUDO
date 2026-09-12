@@ -113,34 +113,63 @@ document.getElementById('closeReader').addEventListener('click', () => {
   reader.classList.remove('open');
 });
 
-// Horizontal swipe detection per slide
+// Horizontal swipe detection per slide — supports touch (phone) and mouse-drag (desktop)
 let touchStartX = null;
 let touchStartY = null;
 
-feed.addEventListener('touchstart', (e) => {
-  touchStartX = e.touches[0].clientX;
-  touchStartY = e.touches[0].clientY;
-}, { passive: true });
+function handleSwipeStart(x, y) {
+  touchStartX = x;
+  touchStartY = y;
+}
 
-feed.addEventListener('touchend', (e) => {
+function handleSwipeEnd(x, y) {
   if (touchStartX === null) return;
-  const dx = e.changedTouches[0].clientX - touchStartX;
-  const dy = e.changedTouches[0].clientY - touchStartY;
+  const dx = x - touchStartX;
+  const dy = y - touchStartY;
   if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
     const idx = Math.round(feed.scrollTop / feed.clientHeight);
     openReader(idx);
   }
   touchStartX = null;
   touchStartY = null;
+}
+
+feed.addEventListener('touchstart', (e) => {
+  handleSwipeStart(e.touches[0].clientX, e.touches[0].clientY);
+}, { passive: true });
+
+feed.addEventListener('touchend', (e) => {
+  handleSwipeEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
 });
 
-// Swipe right-to-left on the reader itself closes it back to feed
+let mouseDown = false;
+feed.addEventListener('mousedown', (e) => {
+  mouseDown = true;
+  handleSwipeStart(e.clientX, e.clientY);
+});
+feed.addEventListener('mouseup', (e) => {
+  if (mouseDown) handleSwipeEnd(e.clientX, e.clientY);
+  mouseDown = false;
+});
+feed.addEventListener('mouseleave', () => { mouseDown = false; touchStartX = null; });
+
+// Swipe right-to-left on the reader itself closes it back to feed — touch and mouse
 let readerStartX = null;
 reader.addEventListener('touchstart', (e) => { readerStartX = e.touches[0].clientX; }, { passive:true });
 reader.addEventListener('touchend', (e) => {
   if (readerStartX === null) return;
   const dx = e.changedTouches[0].clientX - readerStartX;
   if (dx > 60) reader.classList.remove('open');
+  readerStartX = null;
+});
+let readerMouseDown = false;
+reader.addEventListener('mousedown', (e) => { readerMouseDown = true; readerStartX = e.clientX; });
+reader.addEventListener('mouseup', (e) => {
+  if (readerMouseDown && readerStartX !== null) {
+    const dx = e.clientX - readerStartX;
+    if (dx > 60) reader.classList.remove('open');
+  }
+  readerMouseDown = false;
   readerStartX = null;
 });
 </script>
