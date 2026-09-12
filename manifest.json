@@ -1,0 +1,10 @@
+{
+  "name": "Rudo",
+  "short_name": "Rudo",
+  "description": "A swipe-up literary platform for narrative discovery",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0E0D12",
+  "theme_color": "#0E0D12",
+  "icons": []
+}

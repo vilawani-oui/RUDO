@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Rudo</title>
+<meta name="description" content="Rudo — a swipe-up literary platform for narrative discovery.">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0E0D12">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ height:100%; overflow:hidden; background:#0E0D12; font-family:'Source Sans 3',sans-serif; }
+
+  #feed{
+    height:100%; width:100%; overflow-y:auto; scroll-snap-type:y mandatory;
+    -webkit-overflow-scrolling:touch;
+  }
+  .slide{
+    height:100%; width:100%; scroll-snap-align:start;
+    display:flex; flex-direction:column; justify-content:space-between;
+    padding:env(safe-area-inset-top,20px) 24px env(safe-area-inset-bottom,20px);
+    box-sizing:border-box; position:relative;
+  }
+  .slide .top{ display:flex; justify-content:space-between; align-items:center; padding-top:10px; }
+  .slide .brand{ font-size:14px; font-weight:600; color:#F2F0EA; }
+  .slide .counter{ font-size:11px; color:#8A8880; font-family:monospace; }
+  .slide .mid{ }
+  .slide .badge{ display:inline-block; font-size:11px; padding:4px 12px; border-radius:12px; background:rgba(255,255,255,0.08); color:#D8D5C9; margin-bottom:18px; }
+  .slide .hook{ font-family:'Cormorant Garamond',serif; font-style:italic; font-size:clamp(24px,7vw,30px); line-height:1.5; color:#F2F0EA; }
+  .slide .bottom p{ font-size:13px; font-weight:600; color:#F2F0EA; }
+  .slide .bottom span{ display:block; font-size:12px; color:#8A8880; margin-top:2px; }
+  .swipe-hint{ text-align:center; font-size:11px; color:#5c5a52; margin-top:10px; }
+
+  #dots{ position:absolute; right:10px; top:50%; transform:translateY(-50%); display:flex; flex-direction:column; gap:6px; }
+  #dots div{ width:5px; height:5px; border-radius:50%; background:rgba(255,255,255,0.3); }
+  #dots div.active{ background:#F2F0EA; }
+
+  #reader{
+    position:fixed; top:0; left:0; width:100%; height:100%; background:#15130F;
+    transform:translateX(100%); transition:transform 0.28s ease; z-index:10;
+    overflow-y:auto; padding:env(safe-area-inset-top,20px) 24px 40px;
+    box-sizing:border-box;
+  }
+  #reader.open{ transform:translateX(0); }
+  #reader .close{ background:none; border:none; color:#D8D5C9; font-size:14px; padding:10px 0; }
+  #reader .full-text{ font-family:'Cormorant Garamond',serif; font-size:17px; line-height:1.75; color:#EAE2D0; margin:20px 0; }
+  #reader .sources{ display:flex; flex-wrap:wrap; gap:8px; margin-top:24px; }
+  #reader .source-tag{ font-size:12px; padding:6px 14px; border-radius:14px; background:rgba(255,255,255,0.08); color:#D8D5C9; }
+</style>
+</head>
+<body>
+
+<div id="feed"></div>
+<div id="dots"></div>
+<div id="reader">
+  <button class="close" id="closeReader">&larr; Back to feed</button>
+  <div id="readerContent"></div>
+</div>
+
+<script src="pieces.js"></script>
+<script>
+const feed = document.getElementById('feed');
+const dots = document.getElementById('dots');
+const reader = document.getElementById('reader');
+const readerContent = document.getElementById('readerContent');
+
+PIECES.forEach((p, i) => {
+  const slide = document.createElement('div');
+  slide.className = 'slide';
+  slide.dataset.index = i;
+  slide.innerHTML = `
+    <div class="top">
+      <span class="brand">Rudo</span>
+      <span class="counter">${i+1} / ${PIECES.length}</span>
+    </div>
+    <div class="mid">
+      <span class="badge">${p.category} &middot; ${p.language}</span>
+      <p class="hook">"${p.hook}"</p>
+    </div>
+    <div class="bottom">
+      <p>${p.contributor}</p>
+      <span>${p.readTime} &middot; swipe sideways to read</span>
+      <p class="swipe-hint">&larr; swipe &rarr;</p>
+    </div>
+  `;
+  feed.appendChild(slide);
+
+  const dot = document.createElement('div');
+  if (i === 0) dot.className = 'active';
+  dots.appendChild(dot);
+});
+
+feed.addEventListener('scroll', () => {
+  const idx = Math.round(feed.scrollTop / feed.clientHeight);
+  [...dots.children].forEach((d, i) => d.className = i === idx ? 'active' : '');
+});
+
+function openReader(index) {
+  const p = PIECES[index];
+  readerContent.innerHTML = `
+    <span class="badge" style="background:rgba(255,255,255,0.08);color:#D8D5C9;font-size:11px;padding:4px 12px;border-radius:12px;">${p.category} &middot; ${p.language}</span>
+    <p class="full-text">${p.fullText}</p>
+    <p style="font-size:13px;color:#8A8880;">${p.contributor}</p>
+    <div class="sources">
+      ${p.sources.map(s => `<span class="source-tag">${s.label}</span>`).join('')}
+    </div>
+  `;
+  reader.classList.add('open');
+}
+
+document.getElementById('closeReader').addEventListener('click', () => {
+  reader.classList.remove('open');
+});
+
+// Horizontal swipe detection per slide
+let touchStartX = null;
+let touchStartY = null;
+
+feed.addEventListener('touchstart', (e) => {
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+}, { passive: true });
+
+feed.addEventListener('touchend', (e) => {
+  if (touchStartX === null) return;
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  const dy = e.changedTouches[0].clientY - touchStartY;
+  if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+    const idx = Math.round(feed.scrollTop / feed.clientHeight);
+    openReader(idx);
+  }
+  touchStartX = null;
+  touchStartY = null;
+});
+
+// Swipe right-to-left on the reader itself closes it back to feed
+let readerStartX = null;
+reader.addEventListener('touchstart', (e) => { readerStartX = e.touches[0].clientX; }, { passive:true });
+reader.addEventListener('touchend', (e) => {
+  if (readerStartX === null) return;
+  const dx = e.changedTouches[0].clientX - readerStartX;
+  if (dx > 60) reader.classList.remove('open');
+  readerStartX = null;
+});
+</script>
+</body>
+</html>
