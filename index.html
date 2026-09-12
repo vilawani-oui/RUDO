@@ -181,6 +181,30 @@ document.addEventListener('mouseup', (e) => {
   mouseDown = false;
 });
 
+// Trackpad two-finger horizontal swipe (Mac trackpads fire wheel events with deltaX for this, not mousedown/mouseup)
+let wheelAccumX = 0;
+let wheelAccumY = 0;
+let wheelCooldown = false;
+let wheelResetTimer = null;
+
+feed.addEventListener('wheel', (e) => {
+  if (wheelCooldown) return;
+  wheelAccumX += e.deltaX;
+  wheelAccumY += e.deltaY;
+
+  clearTimeout(wheelResetTimer);
+  wheelResetTimer = setTimeout(() => { wheelAccumX = 0; wheelAccumY = 0; }, 200);
+
+  if (Math.abs(wheelAccumX) > 80 && Math.abs(wheelAccumX) > Math.abs(wheelAccumY) * 1.5) {
+    const idx = Math.round(feed.scrollTop / feed.clientHeight);
+    openReader(idx);
+    wheelCooldown = true;
+    wheelAccumX = 0;
+    wheelAccumY = 0;
+    setTimeout(() => { wheelCooldown = false; }, 600);
+  }
+}, { passive: true });
+
 // Swipe right-to-left on the reader itself closes it back to feed — touch and mouse
 let readerStartX = null;
 reader.addEventListener('touchstart', (e) => { readerStartX = e.touches[0].clientX; }, { passive:true });
@@ -200,6 +224,22 @@ reader.addEventListener('mouseup', (e) => {
   readerMouseDown = false;
   readerStartX = null;
 });
+
+let readerWheelAccumX = 0;
+let readerWheelCooldown = false;
+let readerWheelResetTimer = null;
+reader.addEventListener('wheel', (e) => {
+  if (readerWheelCooldown) return;
+  readerWheelAccumX += e.deltaX;
+  clearTimeout(readerWheelResetTimer);
+  readerWheelResetTimer = setTimeout(() => { readerWheelAccumX = 0; }, 200);
+  if (readerWheelAccumX < -80) {
+    reader.classList.remove('open');
+    readerWheelCooldown = true;
+    readerWheelAccumX = 0;
+    setTimeout(() => { readerWheelCooldown = false; }, 600);
+  }
+}, { passive: true });
 </script>
 </body>
 </html>
